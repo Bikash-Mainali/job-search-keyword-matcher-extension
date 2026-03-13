@@ -1,7 +1,9 @@
 // --- State ---
 let keywords = [];
-
 const STORAGE_KEY = "sponsorshipKeywords";
+
+// save default sponsorship phrases on first run
+saveDefaultSponsorshipPhrases();
 
 // --- DOM ---
 const input = document.getElementById('keywordInput');
@@ -28,7 +30,7 @@ const positiveList = document.getElementById("positiveList");
 const negativeList = document.getElementById("negativeList");
 
 // --- Sponsorship storage (chrome.storage.local) ---
-function getSponsorshipPhrases(callback) {
+function getSponsorshipPhrasesFromStorage(callback) {
     chrome.storage.local.get([STORAGE_KEY], (result) => {
         const data = result[STORAGE_KEY] || { positive: [], negative: [] };
         callback(data);
@@ -39,99 +41,8 @@ function saveSponsorshipPhrases(data, callback) {
     chrome.storage.local.set({ [STORAGE_KEY]: data }, callback);
 }
 
-// --- Add positive keyword ---
-function addPositiveKeyword() {
-    const val = positiveInput.value.trim();
-    if (!val) return;
-
-    getSponsorshipPhrases((data) => {
-        let kws = data.positive || [];
-        const exists = kws.some(k => k.toLowerCase() === val.toLowerCase());
-        if (exists) {
-            showToast('Phrase already exists', 'error');
-            return;
-        }
-        kws.unshift(val);
-        data.positive = kws;
-        saveSponsorshipPhrases(data, () => {
-            positiveInput.value = "";
-            renderPositiveTags();
-        });
-    });
-}
-
-// --- Add negative keyword ---
-function addNegativeKeyword() {
-    const val = negativeInput.value.trim();
-    if (!val) return;
-
-    getSponsorshipPhrases((data) => {
-        let kws = data.negative || [];
-        const exists = kws.some(k => k.toLowerCase() === val.toLowerCase());
-        if (exists) {
-            showToast('Phrase already exists', 'error');
-            return;
-        }
-        kws.unshift(val);
-        data.negative = kws;
-        saveSponsorshipPhrases(data, () => {
-            negativeInput.value = "";
-            renderNegativeTags();
-        });
-    });
-}
-
-// --- Render positive list ---
-function renderPositiveTags() {
-    getSponsorshipPhrases((data) => {
-        positiveList.innerHTML = "";
-        (data.positive || []).forEach((kw, idx) => {
-            const li = document.createElement("li");
-            li.innerHTML = `
-                <span>${escapeHtml(kw)}</span>
-                <button class="tag-remove" data-type="positive" data-idx="${idx}">✕</button>
-            `;
-            positiveList.appendChild(li);
-        });
-    });
-}
-
-// --- Render negative list ---
-function renderNegativeTags() {
-    getSponsorshipPhrases((data) => {
-        negativeList.innerHTML = "";
-        (data.negative || []).forEach((kw, idx) => {
-            const li = document.createElement("li");
-            li.innerHTML = `
-                <span>${escapeHtml(kw)}</span>
-                <button class="tag-remove" data-type="negative" data-idx="${idx}">✕</button>
-            `;
-            negativeList.appendChild(li);
-        });
-    });
-}
-
-// --- Remove from sponsorship lists ---
-document.addEventListener("click", function (e) {
-    if (!e.target.classList.contains("tag-remove")) return;
-
-    // Only handle sponsorship list removes (have data-type attribute)
-    const type = e.target.dataset.type;
-    if (!type) return;
-
-    const idx = parseInt(e.target.dataset.idx);
-
-    getSponsorshipPhrases((data) => {
-        data[type].splice(idx, 1);
-        saveSponsorshipPhrases(data, () => {
-            renderPositiveTags();
-            renderNegativeTags();
-        });
-    });
-});
-
-// --- Default sponsorship phrases ---
-function storeDefaultSponsorshipPhrases(callback) {
+// --- Save default sponsorship phrases (only on first run) ---
+function saveDefaultSponsorshipPhrases(callback) {
     const negative = [
         "sponsorship not available", "visa sponsorship not available",
         "no visa sponsorship", "no sponsorship available",
@@ -197,27 +108,118 @@ function storeDefaultSponsorshipPhrases(callback) {
         "visa assistance provided"
     ];
 
-    getSponsorshipPhrases((existing) => {
-        const merged = {
-            positive: [...(existing.positive || []), ...positive],
-            negative: [...(existing.negative || []), ...negative]
-        };
-        // Remove duplicates (case-insensitive)
-        merged.positive = [...new Map(merged.positive.map(k => [k.toLowerCase(), k])).values()];
-        merged.negative = [...new Map(merged.negative.map(k => [k.toLowerCase(), k])).values()];
-
-        saveSponsorshipPhrases(merged, callback);
+    // Only write defaults if storage is empty (first run)
+    chrome.storage.local.get([STORAGE_KEY], (result) => {
+        if (result[STORAGE_KEY]) {
+            if (callback) callback();
+            return;
+        }
+        chrome.storage.local.set({ [STORAGE_KEY]: { positive, negative } }, () => {
+            if (callback) callback();
+        });
     });
 }
+
+// --- Add positive keyword ---
+function addPositiveKeyword() {
+    const val = positiveInput.value.trim();
+    if (!val) return;
+
+    getSponsorshipPhrasesFromStorage((data) => {
+        let kws = data.positive || [];
+        const exists = kws.some(k => k.toLowerCase() === val.toLowerCase());
+        if (exists) {
+            showToast('Phrase already exists', 'error');
+            return;
+        }
+        kws.unshift(val);
+        data.positive = kws;
+        saveSponsorshipPhrases(data, () => {
+            positiveInput.value = "";
+            renderPositiveTags();
+        });
+    });
+}
+
+// --- Add negative keyword ---
+function addNegativeKeyword() {
+    const val = negativeInput.value.trim();
+    if (!val) return;
+
+    getSponsorshipPhrasesFromStorage((data) => {
+        let kws = data.negative || [];
+        const exists = kws.some(k => k.toLowerCase() === val.toLowerCase());
+        if (exists) {
+            showToast('Phrase already exists', 'error');
+            return;
+        }
+        kws.unshift(val);
+        data.negative = kws;
+        saveSponsorshipPhrases(data, () => {
+            negativeInput.value = "";
+            renderNegativeTags();
+        });
+    });
+}
+
+// --- Render positive list ---
+function renderPositiveTags() {
+    getSponsorshipPhrasesFromStorage((data) => {
+        positiveList.innerHTML = "";
+        (data.positive || []).forEach((kw, idx) => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <span>${escapeHtml(kw)}</span>
+                <button class="tag-remove" data-type="positive" data-idx="${idx}">✕</button>
+            `;
+            positiveList.appendChild(li);
+        });
+    });
+}
+
+// --- Render negative list ---
+function renderNegativeTags() {
+    getSponsorshipPhrasesFromStorage((data) => {
+        negativeList.innerHTML = "";
+        (data.negative || []).forEach((kw, idx) => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <span>${escapeHtml(kw)}</span>
+                <button class="tag-remove" data-type="negative" data-idx="${idx}">✕</button>
+            `;
+            negativeList.appendChild(li);
+        });
+    });
+}
+
+// --- Remove from sponsorship lists ---
+document.addEventListener("click", function (e) {
+    if (!e.target.classList.contains("tag-remove")) return;
+
+    // Only handle sponsorship list removes (have data-type attribute)
+    const type = e.target.dataset.type;
+    if (!type) return;
+
+    const idx = parseInt(e.target.dataset.idx);
+
+    getSponsorshipPhrasesFromStorage((data) => {
+        data[type].splice(idx, 1);
+        saveSponsorshipPhrases(data, () => {
+            renderPositiveTags();
+            renderNegativeTags();
+        });
+    });
+});
 
 // --- Show / Hide modal ---
 addSponsorshipBtn.addEventListener("click", () => {
     modal.classList.remove("hidden");
-    storeDefaultSponsorshipPhrases(() => {
+    setTimeout(() => modal.classList.add("show"), 10);
+    // Wait for defaults to be saved before rendering
+    saveDefaultSponsorshipPhrases(() => {
         renderPositiveTags();
         renderNegativeTags();
     });
-    setTimeout(() => modal.classList.add("show"), 10);
 });
 
 closeModalBtn.addEventListener("click", () => {
@@ -324,7 +326,7 @@ function runHighlight() {
         return;
     }
 
-    getSponsorshipPhrases((sponsorshipData) => {
+    getSponsorshipPhrasesFromStorage((sponsorshipData) => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const tabId = tabs[0].id;
 

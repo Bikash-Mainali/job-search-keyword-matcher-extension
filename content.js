@@ -1,5 +1,6 @@
-// JobSpot Content Script — Keyword Highlighter
+// JobSearch Content Script — Keyword Highlighter
 // Injected into pages to highlight keywords with whole-word, case-insensitive matching
+const STORAGE_KEY = "sponsorshipKeywords";
 
 (function () {
   const MARK_CLASS = 'jobspot-highlight';
@@ -34,183 +35,43 @@
     });
   }
 
+  // --- Sponsorship storage (chrome.storage.local) ---
+  function getSponsorshipPhrases() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([STORAGE_KEY], (result) => {
+        resolve(result[STORAGE_KEY] || { positive: [], negative: [] });
+      });
+    });
+  }
+
   // Highlight all matching keywords in the page
-  function highlightKeywords(keywords) {
+  async function highlightKeywords(keywords) {
     if (!keywords || keywords.length === 0) return { count: 0, sponsorship: null };
 
     const bodyText = document.body.innerText.toLowerCase();
 
-    // Detect sponsorship phrases
-    const sponsorshipPatterns = {
+    // Read sponsorship phrases from chrome.storage.local
+    const sponsorshipPatterns = await getSponsorshipPhrases();
+    console.log('Sponsorship patterns loaded:', sponsorshipPatterns);
 
-      negative: [
-
-        // Direct sponsorship denial
-        "sponsorship not available",
-        "visa sponsorship not available",
-        "no visa sponsorship",
-        "no sponsorship available",
-        "sponsorship is not provided",
-        "visa sponsorship is not provided",
-        "this role does not offer sponsorship",
-        "this position does not offer sponsorship",
-        "this role is not eligible for visa sponsorship",
-        "this position is not eligible for sponsorship",
-        "not eligible for visa sponsorship",
-        "unable to sponsor",
-        "will not sponsor",
-        "cannot sponsor",
-        "we do not sponsor visas",
-        "we do not provide visa sponsorship",
-        "company will not sponsor visa",
-        "cannot provide immigration sponsorship",
-
-        // Work authorization wording
-        "must be authorized to work in the united states",
-        "must be legally authorized to work in the us",
-        "must be legally authorized to work in the united states",
-        "must have authorization to work in the us",
-        "must have valid work authorization",
-        "must have unrestricted work authorization",
-        "must have permanent work authorization",
-        "must already be authorized to work",
-        "must be eligible to work in the us",
-        "must have the legal right to work in the us",
-        "must be authorized to work for any employer in the us",
-        "must be authorized to work in the us without sponsorship",
-
-        // Without sponsorship
-        "without sponsorship",
-        "without visa sponsorship",
-        "authorized to work without sponsorship",
-        "authorized to work without visa sponsorship",
-        "authorized to work in the us without sponsorship",
-        "authorized to work in the us without visa sponsorship",
-
-        // H1B related
-        "no h1b sponsorship",
-        "no h1b sponsorship available",
-        "h1b sponsorship not available",
-        "h1b sponsorship unavailable",
-        "no h1b visa sponsorship",
-        "unable to provide H1B visa sponsorship",
-        "h1b visa sponsorship not provided",
-        "h1b transfer not supported",
-        "no visa transfer",
-        "visa transfer not supported",
-
-        // OPT / CPT restrictions
-        "no opt",
-        "no opt candidates",
-        "no cpt",
-        "opt not supported",
-        "cpt not supported",
-        "no stem opt",
-        "opt candidates not accepted",
-        "cpt candidates not accepted",
-        "f1 visa not supported",
-
-        // Green Card / GC EAD
-        "green card required",
-        "green card holders only",
-        "gc required",
-        "gc ead required",
-        "permanent resident required",
-        "must be permanent resident",
-        "must be green card holder",
-        "us permanent resident only",
-
-        // Citizenship requirements
-        "us citizens only",
-        "us citizens or green card holders only",
-        "must be us citizen",
-        "must be a us citizen",
-        "us citizenship required",
-        "citizenship required",
-        "requires us citizenship",
-        "must be us citizen or permanent resident",
-
-        // Government / clearance roles
-        "due to government contract must be us citizen",
-        "must be us citizen due to government contract",
-        "security clearance required",
-        "must be eligible for security clearance",
-        "requires active security clearance"
-      ],
-
-      positive: [
-
-        // General sponsorship
-        "visa sponsorship available",
-        "sponsorship available",
-        "sponsorship provided",
-        "visa sponsorship provided",
-        "visa sponsorship offered",
-        "sponsorship offered",
-
-        // H1B sponsorship
-        "h1b sponsorship available",
-        "h1b visa sponsorship available",
-        "offer h1b visa sponsorship",
-        "offers h1b visa sponsorship",
-        "we sponsor h1b",
-        "we sponsor h1b visas",
-        "h1b transfer supported",
-        "h1b transfer available",
-        "h1b visa transfer supported",
-
-        // Immigration support
-        "immigration sponsorship available",
-        "immigration sponsorship provided",
-        "employment visa sponsorship available",
-
-        // Green card sponsorship
-        "green card sponsorship available",
-        "green card sponsorship provided",
-        "gc sponsorship available",
-
-        // OPT / CPT support
-        "opt accepted",
-        "opt candidates welcome",
-        "cpt accepted",
-        "stem opt accepted",
-        "f1 visa candidates welcome",
-
-        // Other positive wording
-        "visa support available",
-        "relocation and visa sponsorship available",
-        "company will sponsor visa",
-        "employer will sponsor visa",
-        "visa assistance provided"
-      ]
-
-    };
     let positiveSponsorship = [];
     let negativeSponsorship = [];
 
     for (const phrase of sponsorshipPatterns.positive) {
-
       const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
       const regex = new RegExp(`\\b${escaped}\\b`, "i");
-
       if (regex.test(bodyText)) {
         positiveSponsorship.push(phrase);
       }
     }
 
     for (const phrase of sponsorshipPatterns.negative) {
-
       const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
       const regex = new RegExp(`\\b${escaped}\\b`, "i");
-
       if (regex.test(bodyText)) {
         negativeSponsorship.push(phrase);
       }
     }
-
-
 
     // Build regex for keywords
     const escaped = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -287,7 +148,7 @@
       textNode.parentNode.replaceChild(fragment, textNode);
     });
 
-    return { count, sponsorship: {positive:positiveSponsorship, negative:negativeSponsorship} };
+    return { count, sponsorship: { positive: positiveSponsorship, negative: negativeSponsorship } };
   }
 
   // Listen for messages from popup
@@ -297,11 +158,12 @@
       injectStyles();
       clearHighlights();
 
-      const result = highlightKeywords(message.keywords);
-
-      sendResponse({
-        count: result.count,
-        sponsorship: result.sponsorship
+      // Await the async function, then send response
+      highlightKeywords(message.keywords).then(result => {
+        sendResponse({
+          count: result.count,
+          sponsorship: result.sponsorship
+        });
       });
     }
 
@@ -310,7 +172,7 @@
       sendResponse({ cleared: true });
     }
 
-    return true;
+    return true; // Keep message channel open for async sendResponse
   });
 
 })();

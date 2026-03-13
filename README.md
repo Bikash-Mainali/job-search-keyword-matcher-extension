@@ -21,7 +21,7 @@ Keywords and sponsorship phrase lists are saved locally in the browser and persi
 
 ## Installation Instructions
 ### Normal Use
-1. Download the latest release from the [releases page](https://github.com/Bikash-Mainali/BM-Job-Search-Extension/releases).
+1. Clone the repo.
 2. Open Chrome and navigate to `chrome://extensions/`.
 3. Enable "Developer mode" by toggling the switch in the top right.
 4. Click on "Load unpacked" and select the downloaded extension folder.

@@ -5,9 +5,7 @@ BM-JobSearch is a Chrome extension for job seekers who are tired of manually sca
 The extension also solves a specific pain point for candidates who require visa sponsorship: it automatically scans the page for known positive and negative sponsorship language, surfacing phrases like "visa sponsorship available" or "must be authorized to work without sponsorship" the moment you click Highlight. No more reaching the end of a detailed job description only to find a disqualifying line buried in the fine print.
 Keywords and sponsorship phrase lists are saved locally in the browser and persist across sessions. Works on any job board or company careers page — no accounts, no external servers, no tracking.
 
-[![](./images/job-search-ext1.png)](./images/job-search-ext1.png)
-
-[![](./images/job-search-ext2.png)](./images/job-search-ext2.png)
+[![](./images/job-search-ext1.png)](./images/job-search-ext1.png) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [![](./images/job-search-ext2.png)](./images/job-search-ext2.png)
 
 
 

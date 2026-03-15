@@ -2,7 +2,6 @@
 let keywords = [];
 const STORAGE_KEY = "sponsorshipKeywords";
 
-// save default sponsorship phrases on first run
 saveDefaultSponsorshipPhrases();
 
 // --- DOM ---
@@ -10,13 +9,14 @@ const input = document.getElementById('keywordInput');
 const addBtn = document.getElementById('addBtn');
 const tagsContainer = document.getElementById('tagsContainer');
 const emptyMsg = document.getElementById('emptyMsg');
-const saveBtn = document.getElementById('saveBtn');
+const removeAllBtn = document.getElementById('removeAllBtn');
 const highlightBtn = document.getElementById('highlightBtn');
 const clearBtn = document.getElementById('clearBtn');
 const keywordCount = document.getElementById('keywordCount');
 const statusDot = document.getElementById('statusDot');
 const matchInfo = document.getElementById('matchInfo');
 const toast = document.getElementById('toast');
+const autoHighlightToggle = document.getElementById('autoHighlightToggle');
 
 // Sponsorship modal
 const addSponsorshipBtn = document.getElementById("addSponsorship");
@@ -29,7 +29,7 @@ const addNegativeBtn = document.getElementById("addNegativeBtn");
 const positiveList = document.getElementById("positiveList");
 const negativeList = document.getElementById("negativeList");
 
-// --- Sponsorship storage (chrome.storage.local) ---
+// --- Sponsorship storage ---
 function getSponsorshipPhrasesFromStorage(callback) {
     chrome.storage.local.get([STORAGE_KEY], (result) => {
         const data = result[STORAGE_KEY] || { positive: [], negative: [] };
@@ -108,12 +108,8 @@ function saveDefaultSponsorshipPhrases(callback) {
         "visa assistance provided"
     ];
 
-    // Only write defaults if storage is empty (first run)
     chrome.storage.local.get([STORAGE_KEY], (result) => {
-        if (result[STORAGE_KEY]) {
-            if (callback) callback();
-            return;
-        }
+        if (result[STORAGE_KEY]) { if (callback) callback(); return; }
         chrome.storage.local.set({ [STORAGE_KEY]: { positive, negative } }, () => {
             if (callback) callback();
         });
@@ -124,20 +120,14 @@ function saveDefaultSponsorshipPhrases(callback) {
 function addPositiveKeyword() {
     const val = positiveInput.value.trim();
     if (!val) return;
-
     getSponsorshipPhrasesFromStorage((data) => {
         let kws = data.positive || [];
-        const exists = kws.some(k => k.toLowerCase() === val.toLowerCase());
-        if (exists) {
-            showToast('Phrase already exists', 'error');
-            return;
+        if (kws.some(k => k.toLowerCase() === val.toLowerCase())) {
+            showToast('Phrase already exists', 'error'); return;
         }
         kws.unshift(val);
         data.positive = kws;
-        saveSponsorshipPhrases(data, () => {
-            positiveInput.value = "";
-            renderPositiveTags();
-        });
+        saveSponsorshipPhrases(data, () => { positiveInput.value = ""; renderPositiveTags(); });
     });
 }
 
@@ -145,20 +135,14 @@ function addPositiveKeyword() {
 function addNegativeKeyword() {
     const val = negativeInput.value.trim();
     if (!val) return;
-
     getSponsorshipPhrasesFromStorage((data) => {
         let kws = data.negative || [];
-        const exists = kws.some(k => k.toLowerCase() === val.toLowerCase());
-        if (exists) {
-            showToast('Phrase already exists', 'error');
-            return;
+        if (kws.some(k => k.toLowerCase() === val.toLowerCase())) {
+            showToast('Phrase already exists', 'error'); return;
         }
         kws.unshift(val);
         data.negative = kws;
-        saveSponsorshipPhrases(data, () => {
-            negativeInput.value = "";
-            renderNegativeTags();
-        });
+        saveSponsorshipPhrases(data, () => { negativeInput.value = ""; renderNegativeTags(); });
     });
 }
 
@@ -168,10 +152,7 @@ function renderPositiveTags() {
         positiveList.innerHTML = "";
         (data.positive || []).forEach((kw, idx) => {
             const li = document.createElement("li");
-            li.innerHTML = `
-                <span>${escapeHtml(kw)}</span>
-                <button class="tag-remove" data-type="positive" data-idx="${idx}">✕</button>
-            `;
+            li.innerHTML = `<span>${escapeHtml(kw)}</span><button class="tag-remove" data-type="positive" data-idx="${idx}">✕</button>`;
             positiveList.appendChild(li);
         });
     });
@@ -183,10 +164,7 @@ function renderNegativeTags() {
         negativeList.innerHTML = "";
         (data.negative || []).forEach((kw, idx) => {
             const li = document.createElement("li");
-            li.innerHTML = `
-                <span>${escapeHtml(kw)}</span>
-                <button class="tag-remove" data-type="negative" data-idx="${idx}">✕</button>
-            `;
+            li.innerHTML = `<span>${escapeHtml(kw)}</span><button class="tag-remove" data-type="negative" data-idx="${idx}">✕</button>`;
             negativeList.appendChild(li);
         });
     });
@@ -195,19 +173,12 @@ function renderNegativeTags() {
 // --- Remove from sponsorship lists ---
 document.addEventListener("click", function (e) {
     if (!e.target.classList.contains("tag-remove")) return;
-
-    // Only handle sponsorship list removes (have data-type attribute)
     const type = e.target.dataset.type;
     if (!type) return;
-
     const idx = parseInt(e.target.dataset.idx);
-
     getSponsorshipPhrasesFromStorage((data) => {
         data[type].splice(idx, 1);
-        saveSponsorshipPhrases(data, () => {
-            renderPositiveTags();
-            renderNegativeTags();
-        });
+        saveSponsorshipPhrases(data, () => { renderPositiveTags(); renderNegativeTags(); });
     });
 });
 
@@ -215,11 +186,7 @@ document.addEventListener("click", function (e) {
 addSponsorshipBtn.addEventListener("click", () => {
     modal.classList.remove("hidden");
     setTimeout(() => modal.classList.add("show"), 10);
-    // Wait for defaults to be saved before rendering
-    saveDefaultSponsorshipPhrases(() => {
-        renderPositiveTags();
-        renderNegativeTags();
-    });
+    saveDefaultSponsorshipPhrases(() => { renderPositiveTags(); renderNegativeTags(); });
 });
 
 closeModalBtn.addEventListener("click", () => {
@@ -227,10 +194,8 @@ closeModalBtn.addEventListener("click", () => {
     setTimeout(() => modal.classList.add("hidden"), 300);
 });
 
-// --- Sponsorship input listeners ---
 addPositiveBtn.addEventListener("click", addPositiveKeyword);
 positiveInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addPositiveKeyword(); });
-
 addNegativeBtn.addEventListener("click", addNegativeKeyword);
 negativeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addNegativeKeyword(); });
 
@@ -248,23 +213,17 @@ function renderTags() {
     Array.from(tagsContainer.children).forEach(child => {
         if (child.id !== 'emptyMsg') child.remove();
     });
-
     if (keywords.length === 0) {
         emptyMsg.style.display = 'flex';
         keywordCount.textContent = '0 saved';
         return;
     }
-
     emptyMsg.style.display = 'none';
     keywordCount.textContent = `${keywords.length}`;
-
     keywords.forEach((kw, idx) => {
         const tag = document.createElement('div');
         tag.className = 'tag';
-        tag.innerHTML = `
-            <span>${escapeHtml(kw)}</span>
-            <button class="tag-remove" title="Remove" data-idx="${idx}">✕</button>
-        `;
+        tag.innerHTML = `<span>${escapeHtml(kw)}</span><button class="tag-remove" title="Remove" data-idx="${idx}">✕</button>`;
         tagsContainer.appendChild(tag);
     });
 }
@@ -273,143 +232,127 @@ function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function persistKeywords() {
+    chrome.storage.local.set({ jobKeywords: keywords });
+}
+
 // --- Add keyword ---
 function addKeyword() {
     const val = input.value.trim();
     if (!val) return;
-
     if (keywords.some(k => k.toLowerCase() === val.toLowerCase())) {
         showToast('Keyword already exists', 'error');
         input.select();
         return;
     }
-
     keywords.push(val);
     input.value = '';
     renderTags();
+    persistKeywords();
 }
 
-// --- Remove keyword tag (only tags without data-type) ---
+// --- Remove keyword tag ---
 tagsContainer.addEventListener('click', (e) => {
     const btn = e.target.closest('.tag-remove');
     if (!btn) return;
+    if (btn.dataset.type) return;
     const idx = parseInt(btn.dataset.idx);
     keywords.splice(idx, 1);
     renderTags();
+    persistKeywords();
 });
 
-// --- Save keywords ---
-function saveKeywords() {
-    chrome.storage.local.set({ jobKeywords: keywords }, () => {
-        showToast(`✓ ${keywords.length} keyword${keywords.length !== 1 ? 's' : ''} saved`, 'success');
-        statusDot.classList.add('active');
-    });
+// --- Remove all keywords ---
+function removeAllKeywords() {
+    if (keywords.length === 0) { showToast('No keywords to remove', 'info'); return; }
+    keywords = [];
+    renderTags();
+    persistKeywords();
+    statusDot.classList.remove('active');
+    chrome.storage.local.set({ highlightActive: false });
+    showToast('All keywords removed', 'info');
 }
 
-// --- Load saved keywords ---
+// --- Load saved keywords + show sponsorship info if already detected ---
 function loadKeywords() {
-    chrome.storage.local.get(['jobKeywords', 'highlightActive'], (result) => {
+    chrome.storage.local.get(['jobKeywords', 'highlightActive', 'autoHighlight', 'lastHighlightResult'], (result) => {
         if (result.jobKeywords && Array.isArray(result.jobKeywords)) {
             keywords = result.jobKeywords;
             renderTags();
         }
-        if (result.highlightActive) {
-            statusDot.classList.add('active');
-        }
+        if (result.highlightActive) statusDot.classList.add('active');
+        if (autoHighlightToggle) autoHighlightToggle.checked = !!result.autoHighlight;
     });
 }
 
-// --- Highlight on active tab ---
-function runHighlight() {
-    if (keywords.length === 0) {
-        showToast('Add some keywords first!', 'error');
+// --- Auto-highlight toggle ---
+if (autoHighlightToggle) {
+    autoHighlightToggle.addEventListener('change', () => {
+        const enabled = autoHighlightToggle.checked;
+        chrome.storage.local.set({ autoHighlight: enabled }, () => {
+            if (!enabled) {
+                // Clear popup sponsorship panel when toggled off
+                const existingInfo = document.getElementById('sponsorshipInfo');
+                if (existingInfo) existingInfo.remove();
+                matchInfo.textContent = '';
+                matchInfo.className = 'match-info';
+            }
+            showToast(enabled ? '✓ Auto-highlight ON' : 'Auto-highlight OFF', enabled ? 'success' : 'info');
+        });
+    });
+}
+
+// --- Listen for live auto-highlight results pushed from content.js ---
+// Fires when content.js finishes highlighting after page load or SPA nav,
+// so the popup panel updates without needing a manual click.
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.action !== 'autoHighlightResult') return;
+    if (!message.sponsorship) {
+        const existingInfo = document.getElementById('sponsorshipInfo');
+        if (existingInfo) existingInfo.remove();
+        matchInfo.textContent = '';
+        matchInfo.className = 'match-info';
+        statusDot.classList.remove('active');
         return;
     }
+    renderMatchCountInfo({ count: message.count, sponsorship: message.sponsorship });
+});
 
+// --- Highlight on active tab ---
+function runHighlight() {
+    if (keywords.length === 0) { showToast('Add some keywords first!', 'error'); return; }
     getSponsorshipPhrasesFromStorage((sponsorshipData) => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const tabId = tabs[0].id;
-
             chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }, () => {
                 chrome.tabs.sendMessage(tabId, {
                     action: 'highlight',
                     keywords: keywords,
                     sponsorshipPhrases: sponsorshipData
                 }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        showToast('Cannot highlight this page', 'error');
-                        return;
-                    }
-
-                    // Clear previous sponsorship results
-                    const existingInfo = document.getElementById('sponsorshipInfo');
-                    if (existingInfo) existingInfo.remove();
-
-                    const sponsorship = response.sponsorship || {};
-                    const positive = sponsorship.positive || [];
-                    const negative = sponsorship.negative || [];
-
-                    if (positive.length > 0 || negative.length > 0) {
-                        const infoContainer = document.createElement('div');
-                        infoContainer.id = 'sponsorshipInfo';
-                        infoContainer.className = 'sponsorship-info';
-
-                        if (positive.length > 0) {
-                            const posDiv = document.createElement("div");
-                            posDiv.className = "sponsorship-positive";
-                            const title = document.createElement("div");
-                            title.className = "sponsorship-title";
-                            title.textContent = "🟢 Sponsorship Available";
-                            const list = document.createElement("ul");
-                            positive.forEach(p => {
-                                const li = document.createElement("li");
-                                li.textContent = p;
-                                list.appendChild(li);
-                            });
-                            posDiv.appendChild(title);
-                            posDiv.appendChild(list);
-                            infoContainer.appendChild(posDiv);
-                        }
-
-                        if (negative.length > 0) {
-                            const negDiv = document.createElement("div");
-                            negDiv.className = "sponsorship-negative";
-                            const title = document.createElement("div");
-                            title.className = "sponsorship-title";
-                            title.textContent = "🔴 Sponsorship Restrictions";
-                            const list = document.createElement("ul");
-                            negative.forEach(p => {
-                                const li = document.createElement("li");
-                                li.textContent = p;
-                                list.appendChild(li);
-                            });
-                            negDiv.appendChild(title);
-                            negDiv.appendChild(list);
-                            infoContainer.appendChild(negDiv);
-                        }
-
-                        // Insert after match-info
-                        matchInfo.insertAdjacentElement('afterend', infoContainer);
-                    }
-
-                    if (response && response.count !== undefined) {
-                        const c = response.count;
-                        if (c > 0) {
-                            matchInfo.textContent = `✓ ${c} match${c !== 1 ? 'es' : ''} found`;
-                            matchInfo.className = 'match-info found';
-                            showToast(`${c} match${c !== 1 ? 'es' : ''} highlighted!`, 'success');
-                            statusDot.classList.add('active');
-                            chrome.storage.local.set({ highlightActive: true });
-                        } else {
-                            matchInfo.textContent = 'No keyword matches found on this page';
-                            matchInfo.className = 'match-info';
-                            showToast('No keyword matches on this page', 'info');
-                        }
-                    }
+                    if (chrome.runtime.lastError) { showToast('Cannot highlight this page', 'error'); return; }
                 });
             });
         });
     });
+}
+
+// --- Render sponsorship info block in popup ---
+function renderMatchCountInfo(response) {
+    if (response && response.count !== undefined) {
+        const c = response.count;
+        if (c > 0) {
+            matchInfo.textContent = `✓ ${c} match${c !== 1 ? 'es' : ''} found`;
+            matchInfo.className = 'match-info found';
+            showToast(`${c} match${c !== 1 ? 'es' : ''} highlighted!`, 'success');
+            statusDot.classList.add('active');
+            chrome.storage.local.set({ highlightActive: true });
+        } else {
+            matchInfo.textContent = 'No keyword matches found on this page';
+            matchInfo.className = 'match-info';
+            showToast('No keyword matches on this page', 'info');
+        }
+    }
 }
 
 // --- Clear highlights ---
@@ -425,6 +368,7 @@ function clearHighlights() {
                 if (existingInfo) existingInfo.remove();
                 statusDot.classList.remove('active');
                 chrome.storage.local.set({ highlightActive: false });
+                chrome.storage.local.remove('lastHighlightResult');
                 showToast('Highlights cleared', 'info');
             });
         });
@@ -434,7 +378,7 @@ function clearHighlights() {
 // --- Event Listeners ---
 addBtn.addEventListener('click', addKeyword);
 input.addEventListener('keydown', (e) => { if (e.key === 'Enter') addKeyword(); });
-saveBtn.addEventListener('click', saveKeywords);
+removeAllBtn.addEventListener('click', removeAllKeywords);
 highlightBtn.addEventListener('click', runHighlight);
 clearBtn.addEventListener('click', clearHighlights);
 

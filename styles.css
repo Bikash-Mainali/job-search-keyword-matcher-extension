@@ -357,7 +357,7 @@ html, body {
     transform: scale(0.97);
 }
 
-.btn-save {
+.btn-remove-all {
     background: var(--surface2);
     border: 1px solid var(--border);
     color: var(--text);

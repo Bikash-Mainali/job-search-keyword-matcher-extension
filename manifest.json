@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "BM-JobSearch",
+  "name": "BM-JobLens",
   "version": "1.0",
   "description": "Highlight job keywords and detect visa sponsorship on job pages.",
 

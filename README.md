@@ -1,7 +1,7 @@
 # BM Job Search Extension
 
 ## Description
-BM-JobSearch is a Chrome extension for job seekers who are tired of manually scanning through dozens of postings. Define a personal list of keywords — skills, roles, work arrangements, seniority levels — and instantly highlight every match on any job listing page, so the signal jumps out without reading every line.
+BM-JobLens is a Chrome extension for job seekers who are tired of manually scanning through dozens of postings. Define a personal list of keywords — skills, roles, work arrangements, seniority levels — and instantly highlight every match on any job listing page, so the signal jumps out without reading every line.
 The extension also solves a specific pain point for candidates who require visa sponsorship: it automatically scans the page for known positive and negative sponsorship language, surfacing phrases like "visa sponsorship available" or "must be authorized to work without sponsorship" the moment you click Highlight. No more reaching the end of a detailed job description only to find a disqualifying line buried in the fine print.
 Keywords and sponsorship phrase lists are saved locally in the browser and persist across sessions. Works on any job board or company careers page — no accounts, no external servers, no tracking.
 
